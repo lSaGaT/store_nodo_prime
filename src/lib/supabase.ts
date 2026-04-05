@@ -1,8 +1,26 @@
-// Server-side Supabase - runs in Node.js, uses process.env
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+// This file is a barrel export that chooses the right implementation
+// based on the environment (browser vs Node.js)
 
-// Service role client for backend/admin operations (server-side only)
+// Dynamic import based on environment
+let supabaseClient: any;
+
+if (typeof window !== 'undefined') {
+  // Browser/client-side - use the client version
+  const { supabase } = require('./supabase-client');
+  supabaseClient = supabase;
+} else {
+  // Server-side - create a client with process.env
+  const { createClient } = require('@supabase/supabase-js');
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  supabaseClient = createClient(url || '', key || '');
+}
+
+export const supabase = supabaseClient;
+
+// Server-side function for admin operations
 export function createSupabase() {
+  const { createClient } = require('@supabase/supabase-js');
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
 
@@ -11,8 +29,5 @@ export function createSupabase() {
     return null;
   }
 
-  return createSupabaseClient(url, key);
+  return createClient(url, key);
 }
-
-// Re-export client for backward compatibility (will be replaced in browser)
-export { supabase } from './supabase-client.js';
