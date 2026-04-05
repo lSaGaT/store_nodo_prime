@@ -137,48 +137,64 @@ async function startServer() {
 
   // 6.4 GET /api/download/:token
   app.get("/api/download/:token", async (req, res) => {
-    const supabase = createSupabase();
-    if (!supabase) return res.status(500).json({ error: "Erro de configuração" });
+    try {
+      const supabase = createSupabase();
+      if (!supabase) return res.status(500).json({ error: "Erro de configuração" });
 
-    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
 
-    const { data: tokenRecord } = await supabase
-      .from("download_tokens")
-      .select(`
-        *,
-        orders (
-          status,
-          products (
-            file_key,
-            nome
+      const { data: tokenRecord } = await supabase
+        .from("download_tokens")
+        .select(`
+          *,
+          orders (
+            status,
+            products (
+              file_key,
+              nome
+            )
           )
-        )
-      `)
-      .eq("token", req.params.token)
-      .single();
+        `)
+        .eq("token", req.params.token)
+        .single();
 
-    if (!tokenRecord) return res.status(404).json({ error: "Link inválido." });
-    if (tokenRecord.downloaded) return res.status(410).json({ error: "Este link já foi utilizado." });
-    if (new Date(tokenRecord.expires_at) < new Date()) return res.status(410).json({ error: "Este link expirou." });
-    // @ts-ignore
-    if (tokenRecord.orders?.status !== "paid") return res.status(402).json({ error: "Pagamento não confirmado." });
+      if (!tokenRecord) return res.status(404).json({ error: "Link inválido." });
+      if (tokenRecord.downloaded) return res.status(410).json({ error: "Este link já foi utilizado." });
+      if (new Date(tokenRecord.expires_at) < new Date()) return res.status(410).json({ error: "Este link expirou." });
+      // @ts-ignore
+      if (tokenRecord.orders?.status !== "paid") return res.status(402).json({ error: "Pagamento não confirmado." });
 
-    // @ts-ignore
-    const fileKey = tokenRecord.orders.products?.file_key;
-    if (!fileKey) return res.status(404).json({ error: "Arquivo não encontrado." });
+      // @ts-ignore
+      const fileKey = tokenRecord.orders.products?.file_key;
+      if (!fileKey) return res.status(404).json({ error: "Arquivo não encontrado." });
 
-    await supabase.from("download_tokens").update({ downloaded: true, used_by_ip: ip }).eq("token", req.params.token);
+      await supabase.from("download_tokens").update({ downloaded: true, used_by_ip: ip }).eq("token", req.params.token);
 
-    const command = new GetObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: fileKey });
-    const signedUrl = await getSignedUrl(r2, command, { expiresIn: 60 });
+      // Check R2 credentials
+      if (!process.env.R2_ACCESS_KEY || !process.env.R2_SECRET_KEY || !process.env.R2_ENDPOINT || !process.env.R2_BUCKET) {
+        console.error('R2 credentials missing:', {
+          hasAccessKey: !!process.env.R2_ACCESS_KEY,
+          hasSecretKey: !!process.env.R2_SECRET_KEY,
+          hasEndpoint: !!process.env.R2_ENDPOINT,
+          hasBucket: !!process.env.R2_BUCKET,
+        });
+        return res.status(500).json({ error: "Erro de configuração do storage. Entre em contato com o suporte." });
+      }
 
-    // @ts-ignore
-    const fileName = tokenRecord.orders.products?.nome || 'arquivo.zip';
+      const command = new GetObjectCommand({ Bucket: process.env.R2_BUCKET, Key: fileKey });
+      const signedUrl = await getSignedUrl(r2, command, { expiresIn: 60 });
 
-    res.json({
-      downloadUrl: signedUrl,
-      fileName: fileName
-    });
+      // @ts-ignore
+      const fileName = tokenRecord.orders.products?.nome || 'arquivo.zip';
+
+      res.json({
+        downloadUrl: signedUrl,
+        fileName: fileName
+      });
+    } catch (error: any) {
+      console.error('Download error:', error);
+      res.status(500).json({ error: "Erro ao gerar link de download. Tente novamente ou contate o suporte." });
+    }
   });
 
   // 6.5 POST /api/admin/upload
