@@ -157,21 +157,28 @@ async function startServer() {
       .eq("token", req.params.token)
       .single();
 
-    if (!tokenRecord) return res.status(404).send("Link inválido.");
-    if (tokenRecord.downloaded) return res.status(410).send("Este link já foi utilizado.");
-    if (new Date(tokenRecord.expires_at) < new Date()) return res.status(410).send("Este link expirou.");
+    if (!tokenRecord) return res.status(404).json({ error: "Link inválido." });
+    if (tokenRecord.downloaded) return res.status(410).json({ error: "Este link já foi utilizado." });
+    if (new Date(tokenRecord.expires_at) < new Date()) return res.status(410).json({ error: "Este link expirou." });
     // @ts-ignore
-    if (tokenRecord.orders?.status !== "paid") return res.status(402).send("Pagamento não confirmado.");
+    if (tokenRecord.orders?.status !== "paid") return res.status(402).json({ error: "Pagamento não confirmado." });
 
     // @ts-ignore
     const fileKey = tokenRecord.orders.products?.file_key;
-    if (!fileKey) return res.status(404).send("Arquivo não encontrado.");
+    if (!fileKey) return res.status(404).json({ error: "Arquivo não encontrado." });
 
     await supabase.from("download_tokens").update({ downloaded: true, used_by_ip: ip }).eq("token", req.params.token);
 
     const command = new GetObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: fileKey });
     const signedUrl = await getSignedUrl(r2, command, { expiresIn: 60 });
-    res.redirect(signedUrl);
+
+    // @ts-ignore
+    const fileName = tokenRecord.orders.products?.nome || 'arquivo.zip';
+
+    res.json({
+      downloadUrl: signedUrl,
+      fileName: fileName
+    });
   });
 
   // 6.5 POST /api/admin/upload

@@ -79,15 +79,27 @@ export default function Confirmation() {
             <p className="mt-4 text-slate-400 text-sm leading-relaxed">
               Pagamento confirmado com sucesso. Seu ecossistema está pronto para download.
             </p>
-            
+
             <div className="mt-10 space-y-6">
-              <a
-                href={`/api/download/${token}`}
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/download/${token}`);
+                    const data = await res.json();
+                    if (data.downloadUrl) {
+                      window.open(data.downloadUrl, '_blank');
+                    } else {
+                      alert(data.error || 'Erro ao obter link de download');
+                    }
+                  } catch (err) {
+                    alert('Erro de conexão');
+                  }
+                }}
                 className="w-full flex items-center justify-center px-8 py-5 border border-transparent text-lg font-bold rounded-2xl text-slate-950 bg-cyan-400 hover:bg-cyan-300 transition-all shadow-lg shadow-cyan-500/20 active:scale-95"
               >
                 <Download className="mr-3 w-6 h-6" /> Baixar Sistema (ZIP)
-              </a>
-              
+              </button>
+
               <div className="p-5 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-left">
                 <div className="flex items-start">
                   <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
