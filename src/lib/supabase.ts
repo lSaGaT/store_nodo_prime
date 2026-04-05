@@ -9,26 +9,27 @@ const getEnv = (key: string) => {
   return import.meta.env?.[key];
 };
 
-const supabaseUrl = getEnv('VITE_SUPABASE_URL') || getEnv('NEXT_PUBLIC_SUPABASE_URL');
-const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+// Try multiple possible environment variable names
+const supabaseUrl = getEnv('SUPABASE_URL') || getEnv('VITE_SUPABASE_URL') || getEnv('NEXT_PUBLIC_SUPABASE_URL');
+const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
 // Public client for Auth and public data
-// We use a dummy URL if missing to prevent immediate crash, but log a warning
 export const supabase = createSupabaseClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder'
 );
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase configuration missing! Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+  console.warn('Supabase configuration missing! Please set SUPABASE_URL and SUPABASE_ANON_KEY environment variables.');
 }
 
 // Service role client for backend/admin operations
 export function createSupabase() {
-  const url = getEnv('VITE_SUPABASE_URL') || getEnv('NEXT_PUBLIC_SUPABASE_URL') || getEnv('SUPABASE_URL');
-  const key = getEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const url = supabaseUrl;
+  const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('SERVICE_ROLE_KEY');
 
   if (!url || !key) {
+    console.warn('Service role Supabase client missing credentials');
     return null;
   }
 
