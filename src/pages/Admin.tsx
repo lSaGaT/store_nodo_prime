@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Upload, Package, DollarSign, Key, FileText, Link as LinkIcon, CheckCircle2, AlertCircle, Zap, LogOut, User, Trash2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase-client';
 
 interface Product {
   id: string;
