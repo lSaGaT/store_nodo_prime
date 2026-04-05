@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: nodo-prime-store
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: node server.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /api/products

@@ -1,0 +1,5 @@
+{
+  "name": "NodoPrime Store",
+  "description": "Marketplace de sistemas prontos com entrega automatizada via Asaas e Cloudflare R2.",
+  "requestFramePermissions": []
+}
